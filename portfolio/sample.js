@@ -1,31 +1,76 @@
+const http = require("http");
+const fs = require("fs");
+const url = require("url");
+const qs = require("querystring");
 
+var userPath = __dirname + "/data/";
+console.log(userPath);
 
-// var http = require('http');
-// var fs = require('fs');
+var server = http.createServer();
 
-var server = http.createServer(requestHandler);
+server.on("request", (req,res) => {
+    console.log(req.url)
+    var parsedUrl = url.parse(req.url)
+    var store = "";
 
-function requestHandler(req, res) {
-  // handle all html file together
-  if(req.url === '/') {
-    // set appropriate headers
-    res.setHeader('Content-Type', 'text/html')
-    // read file and send chunked data in response
-    fs.createReadStream(file_path).pipe(res);
-    // for all css files
-  } else if(req.url.includes('css')) {
-    //handle css file here
-    // first set headers ie. 'text/css'
-    // read css file and send it in response using createReadStream
+    req.on('data', (chunk) => {
+        store = store + chunk;
+    })
 
-    // for handling images
-  } else if(['png', 'jpg', 'jpeg'].indexOf(req.url.split('.').pop())) {
-    //send images here with appropraite content type
-  }
-  else {
-    res.statusCode = 400;
-    res.end('Page not found')
-  }
-}
+    if ( parsedUrl.pathname === '/') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./index.html").pipe(res); 
+    }
+    else if ( parsedUrl.pathname === '/index.html') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./index.html").pipe(res); 
+    }
+    else if ( parsedUrl.pathname === '/register.html') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./register.html").pipe(res); 
+    }
+    else if(req.url === '/register.html' && req.method === 'POST') {
+        req.on('end', () => {
+            console.log("Inside POST")
+            var username = qs.parse(store).username;
+            var parsedData = qs.parse(store);
+            console.log(parsedData);
+            
+            res.writeHead(201, {'content-type' : 'text/plain'})
 
-server.listen(3000);
+            fs.open(userPath+username+".json", "wx", (err, fd) => {
+                if (err) return console.error(err);
+                fs.writeFile(fd, JSON.stringify(parsedData), (err) => {
+                    if(err) return console.error(err);
+                    fs.close(fd, (err) => {
+                        if(err) return console.error(err);
+                        res.end(username + " file created sucessfully");
+                    })
+                })
+            })
+        })    
+    }
+    else if ( parsedUrl.pathname === '/schedule.html') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./schedule.html").pipe(res); 
+    }
+    else if ( parsedUrl.pathname === '/speakers.html') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./speakers.html").pipe(res); 
+    }
+    else if ( parsedUrl.pathname === '/venue.html') {
+        res.writeHead(200, {'Content-Type': 'text/html'})
+        fs.createReadStream("./venue.html").pipe(res); 
+    }
+    else if ( req.url.includes("css")){
+        fs.createReadStream(`.${req.url}`).pipe(res)
+    }
+    else if ( req.url.includes("jpg")) {
+        // res.writeHead(200, {'Content-Type': 'images/jpg'})
+        fs.createReadStream(`.${req.url}`).pipe(res);
+    }
+    else {
+        res.end("<h1> 404 Page not found </h1>")
+    }
+});
+
